@@ -37,6 +37,7 @@
 
     html, body {
       height: 100%;
+      height: 100dvh;
       background: var(--bg-app);
       color: var(--text-main);
       font-family: var(--font-sans);
@@ -395,6 +396,44 @@
     .report-row.ok { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.35); color: #86efac; }
     .report-row.err { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: #fca5a5; }
     .report-row.info { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); color: #7dd3fc; }
+
+    /* Device Detection & Mobile Interface */
+    .device-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--bg-app); border: 1px solid var(--border);
+      color: var(--text-muted); padding: 4px 10px; border-radius: 999px;
+      font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: 0.14s; white-space: nowrap;
+    }
+    .device-pill:hover { border-color: var(--accent); color: var(--text-main); }
+    .device-pill.mobile-active { border-color: var(--tonic); color: var(--tonic); background: var(--tonic-bg); }
+
+    .piano-scroll-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+    .mobile-oct-bar { display: none; gap: 6px; align-items: center; }
+    .piano-dock.collapsed .piano-scroll-wrap { display: none; }
+
+    /* Mobile Mode (Auto-detected or manually toggled) */
+    body.is-mobile .topbar { padding: 8px 12px; gap: 8px; }
+    body.is-mobile .brand-sub { display: none; }
+    body.is-mobile .brand-title { font-size: 13.5px; }
+    body.is-mobile .nav-tabs {
+      order: 3; width: 100%; flex-wrap: nowrap; overflow-x: auto;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    body.is-mobile .nav-tabs::-webkit-scrollbar { display: none; }
+    body.is-mobile .nav-tab { white-space: nowrap; padding: 7px 11px; font-size: 12px; flex-shrink: 0; }
+    body.is-mobile .workspace { padding: 10px 12px; }
+    body.is-mobile .section-title { font-size: 16.5px; }
+    body.is-mobile .daw-select { font-size: 14px; min-height: 38px; max-width: 100%; }
+    body.is-mobile .btn { min-height: 38px; padding: 8px 12px; }
+    body.is-mobile .btn-sm { min-height: 30px; padding: 4px 8px; }
+    body.is-mobile .answers-grid { grid-template-columns: repeat(2, 1fr); }
+    body.is-mobile .bars-grid { grid-template-columns: repeat(2, 1fr); }
+    body.is-mobile .steps-editor-grid { grid-template-columns: repeat(2, 1fr); }
+    body.is-mobile .piano-dock { padding: 6px 10px 8px; }
+    body.is-mobile .piano-pc-hint { display: none; }
+    body.is-mobile .mobile-oct-bar { display: flex; }
+    body.is-mobile .piano-container { min-width: 820px; height: 104px; touch-action: pan-x; }
   </style>
 </head>
 <body>
@@ -417,6 +456,7 @@
     </nav>
 
     <div class="audio-controls">
+      <button id="deviceModeBtn" class="device-pill" title="Определено автоматически. Нажмите, чтобы переключить вид ПК/Телефон">💻 ПК</button>
       <div class="control-group">
         <label for="volumeSlider">Громкость:</label>
         <input id="volumeSlider" type="range" min="0" max="1" step="0.05" value="0.72" style="width:74px;" />
@@ -746,17 +786,27 @@
   </main>
 
   <!-- 3-Octave Virtual Piano (C3..B5) -->
-  <footer class="piano-dock">
+  <footer class="piano-dock" id="pianoDock">
     <div class="piano-header">
       <div>
-        <strong>Клавиатура (3 октавы):</strong> До малой (C3) — Си второй (B5) ·
+        <strong>Клавиатура (3 окт.):</strong>
         <span id="pianoModeBadge" style="color:var(--accent);">Режим набора аккорда</span>
       </div>
-      <div style="color:var(--text-dim);">
-        ПК: <span class="mono">Z–M</span> (малая окт.), <span class="mono">Q–U</span> (первая окт.), <span class="mono">Shift + Q–U</span> (вторая окт.)
+      <div class="mobile-oct-bar">
+        <button class="btn btn-sm" data-octscroll="0">C3</button>
+        <button class="btn btn-sm" data-octscroll="0.35">C4</button>
+        <button class="btn btn-sm" data-octscroll="0.7">C5</button>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="piano-pc-hint" style="color:var(--text-dim);">
+          ПК: <span class="mono">Z–M</span> (малая окт.), <span class="mono">Q–U</span> (первая окт.), <span class="mono">Shift + Q–U</span> (вторая окт.)
+        </span>
+        <button id="pianoToggleBtn" class="btn btn-sm btn-ghost">🎹 Свернуть</button>
       </div>
     </div>
-    <div class="piano-container" id="pianoKeyboard"></div>
+    <div class="piano-scroll-wrap" id="pianoScrollWrap">
+      <div class="piano-container" id="pianoKeyboard"></div>
+    </div>
   </footer>
 
   <script>
@@ -2217,6 +2267,68 @@
     });
 
     applyLevelPreset(1);
+
+    /* =========================================================
+       10. DEVICE DETECTION (PC vs MOBILE PHONE)
+    ========================================================= */
+    const deviceState = { manual: null };
+
+    function isPhoneDevice() {
+      const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      const uaMobile = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent);
+      const narrow = window.innerWidth <= 820;
+      return uaMobile || (coarse && narrow) || narrow;
+    }
+
+    function applyDeviceMode(isMobile) {
+      document.body.classList.toggle('is-mobile', isMobile);
+      document.body.classList.toggle('is-desktop', !isMobile);
+      const btn = document.getElementById('deviceModeBtn');
+      btn.textContent = isMobile ? '📱 Телефон' : '💻 ПК';
+      btn.classList.toggle('mobile-active', isMobile);
+
+      if (isMobile) {
+        // Center piano scroll on middle octave (C4)
+        const wrap = document.getElementById('pianoScrollWrap');
+        setTimeout(() => { wrap.scrollLeft = wrap.scrollWidth * 0.28; }, 50);
+      }
+    }
+
+    function updateDeviceDetection() {
+      if (deviceState.manual !== null) {
+        applyDeviceMode(deviceState.manual === 'mobile');
+      } else {
+        applyDeviceMode(isPhoneDevice());
+      }
+    }
+
+    document.getElementById('deviceModeBtn').addEventListener('click', () => {
+      const currentlyMobile = document.body.classList.contains('is-mobile');
+      deviceState.manual = currentlyMobile ? 'desktop' : 'mobile';
+      updateDeviceDetection();
+    });
+
+    document.getElementById('pianoToggleBtn').addEventListener('click', () => {
+      const dock = document.getElementById('pianoDock');
+      const collapsed = dock.classList.toggle('collapsed');
+      document.getElementById('pianoToggleBtn').textContent = collapsed ? '🎹 Показать' : '🎹 Свернуть';
+    });
+
+    document.querySelectorAll('[data-octscroll]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wrap = document.getElementById('pianoScrollWrap');
+        wrap.scrollTo({ left: wrap.scrollWidth * Number(btn.dataset.octscroll), behavior: 'smooth' });
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      if (deviceState.manual === null) updateDeviceDetection();
+    });
+    window.addEventListener('orientationchange', () => {
+      if (deviceState.manual === null) setTimeout(updateDeviceDetection, 120);
+    });
+
+    updateDeviceDetection();
   </script>
 </body>
 </html>
