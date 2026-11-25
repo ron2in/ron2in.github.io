@@ -448,6 +448,32 @@
     body.is-mobile .mobile-mute-btn { display: inline-flex; }
     body.is-mobile .audio-controls .control-group { display: none; }
     .piano-dock { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+
+    /* ===== NOTES & BASICS TAB ===== */
+    .basics-subtabs { display:flex; gap:4px; margin-bottom:14px; }
+    .basics-subtab { background:var(--bg-app); border:1px solid var(--border); color:var(--text-muted); padding:6px 14px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; transition:0.13s; }
+    .basics-subtab.active { background:var(--bg-elevated); color:var(--accent); border-color:var(--border-light); }
+    .basics-panel { display:none; }
+    .basics-panel.active { display:block; }
+    .note-btns-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin:12px 0; }
+    .note-btn { background:var(--bg-card); border:1px solid var(--border); color:var(--text-main); padding:10px 6px; border-radius:var(--radius-sm); font-size:14px; font-weight:700; cursor:pointer; text-align:center; transition:0.13s; font-family:inherit; }
+    .note-btn:hover { border-color:var(--accent); }
+    .note-btn.correct { background:rgba(34,197,94,0.18); border-color:var(--success); color:#86efac; }
+    .note-btn.wrong { background:rgba(239,68,68,0.18); border-color:var(--danger); color:#fca5a5; }
+    .timer-box { font-family:var(--font-mono); font-size:28px; font-weight:700; color:var(--accent); text-align:center; margin:4px 0; }
+    .record-box { font-family:var(--font-mono); font-size:13px; color:var(--text-muted); text-align:center; }
+    .basics-staff-wrap { width:100%; display:flex; justify-content:center; margin:12px 0; }
+    .basics-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+    .basics-feedback { min-height:32px; font-size:14px; font-weight:600; text-align:center; padding:6px; border-radius:var(--radius-sm); }
+    .basics-feedback.ok { color:var(--success); background:rgba(34,197,94,0.1); }
+    .basics-feedback.err { color:var(--danger); background:rgba(239,68,68,0.1); }
+    /* Mobile */
+    body.is-mobile .note-btns-grid { grid-template-columns:repeat(4,1fr); gap:6px; }
+    body.is-mobile .note-btn { padding:12px 4px; font-size:13px; }
+
+    /* Ear trainer interval direction toggle */
+    .ear-dir-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:6px; }
+    body.is-mobile #eAnswersGrid.many-cols { grid-template-columns:repeat(2,1fr); }
   </style>
 </head>
 <body>
@@ -463,6 +489,7 @@
 
     <nav class="nav-tabs" role="tablist">
       <button class="nav-tab active" data-tab="trainer">Тренажёр построения</button>
+      <button class="nav-tab" data-tab="basics">🎵 Ноты и база</button>
       <button class="nav-tab" data-tab="harmonize">Гармонизация (4-голосие)</button>
       <button class="nav-tab" data-tab="formulas">Справочник и конструктор формул</button>
       <button class="nav-tab" data-tab="ear">Слуховой тренажёр</button>
@@ -483,6 +510,94 @@
     <div class="container">
 
       <!-- ===================================================
+           TAB: NOTES & BASICS (FOR BEGINNERS)
+      =================================================== -->
+      <section id="sec-basics" class="section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Ноты и база — Для начинающих</h1>
+            <p class="section-desc">Научитесь читать ноты на нотном стане и узнавать их на слух.</p>
+          </div>
+        </div>
+
+        <div class="basics-subtabs">
+          <button class="basics-subtab active" data-bmode="read">👁 Угадай ноту на нотном стане</button>
+          <button class="basics-subtab" data-bmode="ear">👂 Угадай ноту на слух</button>
+        </div>
+
+        <!-- MODE 1: READ NOTE ON STAFF -->
+        <div class="basics-panel active" id="bPanelRead">
+          <div class="card">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+              <select id="bClefSel" class="daw-select">
+                <option value="treble">Скрипичный ключ</option>
+                <option value="bass">Басовый ключ</option>
+                <option value="both">Оба ключа</option>
+              </select>
+              <select id="bDiffSel" class="daw-select">
+                <option value="white">Только белые клавиши в пределах стана</option>
+                <option value="ledger">С добавочными линейками</option>
+                <option value="accidental">Со знаками альтерации ♯ и ♭</option>
+              </select>
+              <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text-muted); cursor:pointer;">
+                <input type="checkbox" id="bOctMode" /> Учитывать октаву
+              </label>
+              <button class="btn btn-primary" id="bTimerBtn">⏱ Старт таймера (1 мин)</button>
+            </div>
+
+            <div style="display:flex; gap:16px; justify-content:center; margin-bottom:8px;">
+              <div class="timer-box" id="bTimerDisplay" style="display:none;">1:00</div>
+              <div style="text-align:center; display:none;" id="bTimerScoreBox">
+                <div class="timer-box" id="bTimerScore" style="font-size:20px;">0</div>
+                <div style="font-size:11px; color:var(--text-muted);">правильно</div>
+              </div>
+              <div style="text-align:center; display:none;" id="bRecordBox">
+                <div class="record-box">Рекорд: <strong id="bRecordVal">0</strong> за минуту</div>
+              </div>
+            </div>
+
+            <div class="basics-staff-wrap">
+              <svg id="bStaffSvg" viewBox="0 0 340 235" xmlns="http://www.w3.org/2000/svg" style="width:100%; max-width:400px; height:auto;"></svg>
+            </div>
+
+            <div class="basics-feedback" id="bFeedback"></div>
+
+            <div style="margin-top:12px;">
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px; text-align:center;">Нажмите нужную ноту на клавиатуре внизу или выберите из кнопок:</div>
+              <div class="note-btns-grid" id="bNoteGrid"></div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:8px;">
+              <span style="font-size:12.5px; color:var(--text-muted);">Серия: <strong id="bStreak" style="color:var(--accent);">0</strong></span>
+              <button class="btn btn-ghost btn-sm" id="bNewNoteBtn">↻ Пропустить</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODE 2: EAR NOTE -->
+        <div class="basics-panel" id="bPanelEar">
+          <div class="card">
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:14px;">
+              Программа проиграет эталонную ноту <strong>До4</strong> (подсветит на пианино), затем через паузу — целевую ноту в пределах одной октавы. Нажмите услышанную ноту на клавиатуре.
+            </p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+              <button class="btn btn-primary" id="bEarPlayBtn">▶ Играть вопрос</button>
+              <button class="btn" id="bEarRepeatBtn">↺ Повторить</button>
+            </div>
+            <div class="basics-feedback" id="bEarFeedback">Нажмите «Играть вопрос», чтобы начать</div>
+            <div style="margin-top:12px; font-size:12.5px; color:var(--text-muted); text-align:center;">
+              Нажмите услышанную ноту на клавиатуре внизу или на кнопках:
+            </div>
+            <div class="note-btns-grid" id="bEarNoteGrid" style="margin-top:8px;"></div>
+            <div style="margin-top:12px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+              <span style="font-size:12.5px; color:var(--text-muted);">Серия: <strong id="bEarStreak" style="color:var(--accent);">0</strong></span>
+              <span style="font-size:12.5px; color:var(--text-muted);">Точность: <strong id="bEarAcc" style="color:var(--tonic);">—</strong></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================
            MAIN MODULE: CHORD BUILDING & INVERSIONS TRAINER
       =================================================== -->
       <section id="sec-trainer" class="section active">
@@ -497,6 +612,7 @@
               <option value="triads">Только трезвучия (Б53, М53, Ум53, Ув53)</option>
               <option value="sevenths">Только септаккорды (все виды)</option>
               <option value="rare">Редкие / Ув / Ум (Ум53, Ув53, Бм7, Мум7, Ум7, БУв7, МУв7)</option>
+              <option value="intervals">Интервалы (от м2 до ч8)</option>
             </select>
             <select id="mTaskMode" class="daw-select">
               <option value="root">От заданного звука</option>
@@ -611,7 +727,18 @@
               <option value="triads">Трезвучия и обращения (53, 6, 64)</option>
               <option value="sevenths">Все 8 септаккордов (основное положение)</option>
               <option value="dom_inv">Обращения D7 и УмVII7 (7, 65, 43, 2)</option>
+              <option value="intervals_basic">Интервалы базовые (ч1, м2, б2, м3, б3, ч4, ч5, ч8)</option>
+              <option value="intervals_all">Все интервалы (ч1 – ч8 + тритон)</option>
+              <option value="degrees">Ступени в ладу (I–VII)</option>
             </select>
+            <div class="ear-dir-row" id="eIntervalDirRow" style="display:none;">
+              <span style="font-size:12px;color:var(--text-muted);">Направление:</span>
+              <select id="eIntervalDir" class="daw-select">
+                <option value="up">Мелодически вверх</option>
+                <option value="down">Мелодически вниз</option>
+                <option value="harm">Гармонически</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -868,6 +995,22 @@
     };
 
     const TONE_ROLES = ['основной тон (прима)', 'терция аккорда', 'квинта аккорда', 'септима аккорда'];
+
+    const INTERVALS_DB = [
+      { id: 'ch1',  short: 'ч1',  name: 'Чистая прима',       semi: 0,  basic: true,  hint: 'одна и та же нота (унисон)' },
+      { id: 'm2',   short: 'м2',  name: 'Малая секунда',      semi: 1,  basic: true,  hint: 'резкая, тема «Челюстей»' },
+      { id: 'b2',   short: 'б2',  name: 'Большая секунда',    semi: 2,  basic: true,  hint: 'обычный шаг гаммы' },
+      { id: 'm3',   short: 'м3',  name: 'Малая терция',       semi: 3,  basic: true,  hint: 'грустная, минорная' },
+      { id: 'b3',   short: 'б3',  name: 'Большая терция',     semi: 4,  basic: true,  hint: 'светлая, мажорная' },
+      { id: 'ch4',  short: 'ч4',  name: 'Чистая кварта',      semi: 5,  basic: true,  hint: 'торжественный гимн / марш' },
+      { id: 'trit', short: 'тритон', name: 'Тритон (ув4/ум5)', semi: 6, basic: false, hint: 'острый, напряжённый' },
+      { id: 'ch5',  short: 'ч5',  name: 'Чистая квинта',      semi: 7,  basic: true,  hint: 'пустая, «Звёздные войны»' },
+      { id: 'm6',   short: 'м6',  name: 'Малая секста',       semi: 8,  basic: false, hint: 'лирическая, грустная' },
+      { id: 'b6',   short: 'б6',  name: 'Большая секста',     semi: 9,  basic: false, hint: 'широкая, «В лесу родилась ёлочка»' },
+      { id: 'm7',   short: 'м7',  name: 'Малая септима',      semi: 10, basic: false, hint: 'блюзовая, неустойчивая' },
+      { id: 'b7',   short: 'б7',  name: 'Большая септима',    semi: 11, basic: false, hint: 'острая, джазовая' },
+      { id: 'ch8',  short: 'ч8',  name: 'Чистая октава',      semi: 12, basic: true,  hint: 'та же нота на октаву выше' }
+    ];
 
     function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
     function midiToRu(m) { return NOTE_RU[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); }
@@ -1229,11 +1372,18 @@
 
     function syncPianoMode() {
       const isTrainer = document.getElementById('sec-trainer').classList.contains('active');
-      document.getElementById('pianoModeBadge').textContent = isTrainer
-        ? 'Режим набора аккорда (клик по клавише добавляет/убирает ноту)'
-        : 'Режим свободной игры';
-      pianoUI.onNoteSelect = isTrainer ? toggleTrainerNote : null;
-      if (!isTrainer) pianoUI.clearStatuses();
+      const isBasics = document.getElementById('sec-basics').classList.contains('active');
+      if (isTrainer) {
+        document.getElementById('pianoModeBadge').textContent = 'Режим набора аккорда (клик по клавише добавляет/убирает ноту)';
+        pianoUI.onNoteSelect = toggleTrainerNote;
+      } else if (isBasics) {
+        document.getElementById('pianoModeBadge').textContent = 'Режим ответа (нажмите услышанную или показанную ноту)';
+        pianoUI.onNoteSelect = handleBasicsPianoInput;
+      } else {
+        document.getElementById('pianoModeBadge').textContent = 'Режим свободной игры';
+        pianoUI.onNoteSelect = null;
+        pianoUI.clearStatuses();
+      }
     }
 
     document.querySelectorAll('.nav-tab').forEach(btn => {
@@ -1246,7 +1396,7 @@
         syncPianoMode();
         if (document.body.classList.contains('is-mobile')) {
           if (tab === 'harmonize' || tab === 'formulas') setPianoCollapsed(true);
-          else if (tab === 'trainer') setPianoCollapsed(false);
+          else if (tab === 'trainer' || tab === 'basics') setPianoCollapsed(false);
         }
       });
     });
@@ -1290,6 +1440,32 @@
 
       const grp = document.getElementById('mFilterGroup').value;
       const mode = document.getElementById('mTaskMode').value;
+      document.getElementById('mTaskMode').disabled = (grp === 'intervals');
+
+      if (grp === 'intervals') {
+        const ivPool = INTERVALS_DB.filter(iv => iv.semi >= 1 && iv.semi <= 12);
+        const iv = ivPool[Math.floor(Math.random() * ivPool.length)];
+        const dir = Math.random() < 0.5 ? 'up' : 'down';
+        const givenMidi = dir === 'up'
+          ? 53 + Math.floor(Math.random() * 14)   // F3..F#4
+          : 62 + Math.floor(Math.random() * 14);  // D4..D#5
+        const targetMidi = dir === 'up' ? givenMidi + iv.semi : givenMidi - iv.semi;
+        const expectedNotes = [Math.min(givenMidi, targetMidi), Math.max(givenMidi, targetMidi)];
+        const dirLabel = dir === 'up' ? 'вверх' : 'вниз';
+        const title = `Построй интервал ${iv.short} (${iv.name}) ${dirLabel} от ноты ${midiToRu(givenMidi)}`;
+        const hint = `${iv.semi} полутонов · Ассоциация: ${iv.hint}. Нажмите обе ноты (опорную и целевую).`;
+
+        mState.task = {
+          isInterval: true, iv, dir, givenMidi, targetMidi,
+          chord: { id: 'interval_' + iv.id, intervals: [0, iv.semi] },
+          rootPc: givenMidi % 12, invIdx: 0, invCode: iv.short,
+          expectedNotes, title, hint
+        };
+        document.getElementById('mTaskTitle').textContent = title;
+        document.getElementById('mTaskHint').textContent = hint;
+        renderMainUserState();
+        return;
+      }
 
       let pool = CHORD_DB;
       if (grp === 'triads') pool = CHORD_DB.filter(c => c.group === 'triads');
@@ -1370,6 +1546,53 @@
       if (!usr.length) {
         fb.className = 'feedback-banner info';
         fb.textContent = 'Наберите ноты на клавиатуре или нотном стане.';
+        return;
+      }
+
+      if (t.isInterval) {
+        const exp = t.expectedNotes;
+        const exact = usr.length === 2 && usr[0] === exp[0] && usr[1] === exp[1];
+        if (!mState.checked) {
+          mState.checked = true;
+          if (exact) mStats.streak++;
+          else mStats.streak = 0;
+          saveMStats();
+          renderMStats();
+        }
+        pianoUI.clearStatuses();
+        const staffObjs = [];
+        const greenMidis = [], redMidis = [], yellowMidis = [];
+        usr.forEach(m => {
+          if (exp.includes(m)) {
+            greenMidis.push(m);
+            staffObjs.push({ midi: m, color: '#22c55e' });
+          } else {
+            redMidis.push(m);
+            staffObjs.push({ midi: m, color: '#ef4444' });
+          }
+        });
+        exp.forEach(em => {
+          if (!usr.includes(em)) {
+            yellowMidis.push(em);
+            staffObjs.push({ midi: em, color: '#eab308' });
+          }
+        });
+        pianoUI.setKeyClass(greenMidis, 'check-ok');
+        pianoUI.setKeyClass(redMidis, 'check-err');
+        pianoUI.setKeyClass(yellowMidis, 'check-warn');
+        renderGrandStaff(document.getElementById('mStaffSvg'), staffObjs);
+        audio.playChord(usr, 0.9, 0.25);
+
+        if (exact) {
+          fb.className = 'feedback-banner ok';
+          fb.innerHTML = `<strong>Верно!</strong> Интервал <strong>${t.iv.short}</strong> (${t.iv.name}, ${t.iv.semi} пт) построен точно: <strong class="mono">${exp.map(midiToRu).join(' – ')}</strong>.`;
+        } else if (usr.length === 2 && Math.abs(usr[1] - usr[0]) === t.iv.semi) {
+          fb.className = 'feedback-banner warn';
+          fb.innerHTML = `Величина интервала верная (${t.iv.semi} пт), но строить нужно ${t.dir === 'up' ? 'вверх' : 'вниз'} от ноты <strong>${midiToRu(t.givenMidi)}</strong>. Эталон: <strong class="mono">${exp.map(midiToRu).join(' – ')}</strong>.`;
+        } else {
+          fb.className = 'feedback-banner err';
+          fb.innerHTML = `Есть ошибка. Правильный интервал ${t.iv.short} (${t.iv.semi} пт): <strong class="mono">${exp.map(midiToRu).join(' – ')}</strong>.`;
+        }
         return;
       }
 
@@ -1569,13 +1792,32 @@
     ========================================================= */
     const eState = { q: null, answered: false, streak: 0, ok: 0, total: 0 };
 
+    function playEarQuestion(q) {
+      if (!q) return;
+      if (q.mode === 'degrees' && q.cadence) {
+        q.cadence.forEach((ch, idx) => {
+          ch.forEach(m => audio.playNote(m, 0.52, idx * 0.62, 0.68));
+        });
+        audio.playNote(q.notes[0], 1.15, q.cadence.length * 0.62 + 0.35, 0.85);
+      } else if (q.isInterval) {
+        const arp = q.dir === 'harm' ? 0 : 0.42;
+        audio.playChord(q.notes, 0.95, arp);
+      } else {
+        audio.playChord(q.notes, 1.0, 0);
+      }
+    }
+
     function nextEarQuestion() {
       eState.answered = false;
       const mode = document.getElementById('eFilterSelect').value;
+      const isIntervalMode = mode === 'intervals_basic' || mode === 'intervals_all';
+      document.getElementById('eIntervalDirRow').style.display = isIntervalMode ? 'flex' : 'none';
       const fb = document.getElementById('eFeedback');
       fb.textContent = '';
 
-      let options = [], pick, root, notes, resNotes = null;
+      let options = [], pick, root, notes, resNotes = null, promptText = 'Какой аккорд / обращение прозвучало?';
+      let extra = { mode };
+
       if (mode === 'triads') {
         const list = [
           { id:'maj0', t:'Б53', s:'Маж. основное', iv:[0,4,7], inv:0 },
@@ -1599,7 +1841,7 @@
         notes = buildInversionNotes(root, pick.iv, 0);
         if (pick.id === 'dom7') resNotes = [root + 5, root + 9, root + 12];
         if (pick.id === 'dim7') resNotes = [root + 1, root + 5, root + 8];
-      } else {
+      } else if (mode === 'dom_inv') {
         const list = [
           { id:'D7', t:'D7', s:'Доминантсепт', iv:[0,4,7,10], inv:0, off:-5 },
           { id:'D65', t:'D65', s:'Квинтсекстаккорд', iv:[0,4,7,10], inv:1, off:-5 },
@@ -1613,13 +1855,49 @@
         const tonic = 60 + Math.floor(Math.random() * 5);
         notes = buildInversionNotes(tonic + pick.off, pick.iv, pick.inv);
         resNotes = pick.id === 'D2' ? buildInversionNotes(tonic, [0,4,7], 1) : [tonic, tonic + 4, tonic + 7];
+      } else if (isIntervalMode) {
+        const dir = document.getElementById('eIntervalDir').value;
+        const ivList = mode === 'intervals_basic' ? INTERVALS_DB.filter(x => x.basic) : INTERVALS_DB;
+        options = ivList.map(x => ({
+          id: x.id,
+          t: `${x.short} — ${x.semi} пт`,
+          s: x.hint,
+          semi: x.semi,
+          name: x.name
+        }));
+        pick = options[Math.floor(Math.random() * options.length)];
+        const base = 55 + Math.floor(Math.random() * 12);
+        notes = pick.semi === 0 ? [base] : (dir === 'down' ? [base + pick.semi, base] : [base, base + pick.semi]);
+        extra = { mode, isInterval: true, dir };
+        promptText = `Какой интервал прозвучал? (${dir === 'up' ? 'вверх' : dir === 'down' ? 'вниз' : 'гармонически'})`;
+      } else if (mode === 'degrees') {
+        const isMinor = Math.random() < 0.4;
+        const tonic = isMinor ? 57 : 60; // A3 (Ля минор) or C4 (До мажор)
+        const scale = isMinor ? [0,2,3,5,7,8,10] : [0,2,4,5,7,9,11];
+        const romans = ['I','II','III','IV','V','VI','VII'];
+        const degHints = ['тоника (устой)', 'II ступень', 'медианта', 'субдоминанта', 'доминанта', 'VI ступень', 'вводный тон'];
+        const keyLabel = isMinor ? 'Ля минор' : 'До мажор';
+        const cadence = isMinor
+          ? [[57,60,64], [62,65,69], [64,68,71], [57,60,64]]
+          : [[60,64,67], [65,69,72], [67,71,74], [60,64,67]];
+        options = romans.map((r, i) => ({
+          id: 'deg_' + i,
+          t: r,
+          s: `${NOTE_RU[(tonic + scale[i]) % 12]} · ${degHints[i]}`,
+          midi: tonic + scale[i]
+        }));
+        pick = options[Math.floor(Math.random() * options.length)];
+        notes = [pick.midi];
+        extra = { mode, cadence };
+        promptText = `Прозвучала настройка (${keyLabel}: I–IV–V–I). Какая это ступень?`;
       }
 
-      eState.q = { ansId: pick.id, ansText: `${pick.t} — ${pick.s}`, notes, resNotes };
+      eState.q = { ansId: pick.id, ansText: `${pick.t} (${pick.s})`, notes, resNotes, ...extra };
       document.getElementById('eResolveBtn').style.display = resNotes ? 'inline-flex' : 'none';
-      document.getElementById('ePrompt').textContent = 'Какой аккорд / обращение прозвучало?';
+      document.getElementById('ePrompt').textContent = promptText;
 
       const grid = document.getElementById('eAnswersGrid');
+      grid.classList.toggle('many-cols', options.length >= 7);
       grid.innerHTML = '';
       options.forEach(o => {
         const b = document.createElement('button');
@@ -1647,11 +1925,19 @@
         });
         grid.appendChild(b);
       });
-      audio.playChord(notes, 1.0, 0);
+      playEarQuestion(eState.q);
     }
 
+    document.getElementById('eFilterSelect').addEventListener('change', () => {
+      const mode = document.getElementById('eFilterSelect').value;
+      document.getElementById('eIntervalDirRow').style.display = (mode === 'intervals_basic' || mode === 'intervals_all') ? 'flex' : 'none';
+      nextEarQuestion();
+    });
+    document.getElementById('eIntervalDir').addEventListener('change', () => {
+      if (eState.q && eState.q.isInterval) nextEarQuestion();
+    });
     document.getElementById('eNextBtn').addEventListener('click', nextEarQuestion);
-    document.getElementById('eRepeatBtn').addEventListener('click', () => { if (eState.q) audio.playChord(eState.q.notes, 1.0, 0); });
+    document.getElementById('eRepeatBtn').addEventListener('click', () => playEarQuestion(eState.q));
     document.getElementById('eArpBtn').addEventListener('click', () => { if (eState.q) audio.playChord(eState.q.notes, 1.0, 0.22); });
     document.getElementById('eResolveBtn').addEventListener('click', () => {
       if (!eState.q || !eState.q.resNotes) return;
@@ -2330,6 +2616,274 @@
     });
 
     applyLevelPreset(1);
+
+    /* =========================================================
+       9.5. TAB: NOTES & BASICS (FOR BEGINNERS)
+    ========================================================= */
+    const B_RECORD_KEY = 'harmony_basics_record_v1';
+    const bState = {
+      mode: 'read',
+      q: null,
+      answered: false,
+      streak: 0,
+      best: (() => { try { return Number(localStorage.getItem(B_RECORD_KEY)) || 0; } catch { return 0; } })(),
+      timerRunning: false,
+      timerLeft: 60,
+      timerScore: 0,
+      timerInterval: null,
+      advanceTimer: null,
+      earQ: null,
+      earAnswered: false,
+      earStreak: 0,
+      earOk: 0,
+      earTotal: 0
+    };
+
+    const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
+    const isWhiteMidi = m => WHITE_PCS.includes(((m % 12) + 12) % 12);
+
+    function renderBasicsNoteButtons() {
+      const diff = document.getElementById('bDiffSel').value;
+      const grid = document.getElementById('bNoteGrid');
+      grid.innerHTML = '';
+      const pcs = diff === 'accidental'
+        ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        : WHITE_PCS;
+      pcs.forEach(pc => {
+        const btn = document.createElement('button');
+        btn.className = 'note-btn';
+        btn.dataset.pc = pc;
+        btn.textContent = NOTE_RU[pc];
+        btn.addEventListener('click', () => checkBasicsReadAnswer(pc, null, btn));
+        grid.appendChild(btn);
+      });
+    }
+
+    function generateBasicsReadQuestion() {
+      if (bState.advanceTimer) { clearTimeout(bState.advanceTimer); bState.advanceTimer = null; }
+      bState.answered = false;
+      pianoUI.clearStatuses();
+      document.getElementById('bFeedback').className = 'basics-feedback';
+      document.getElementById('bFeedback').textContent = '';
+      document.querySelectorAll('#bNoteGrid .note-btn').forEach(b => b.classList.remove('correct', 'wrong'));
+
+      const clefPref = document.getElementById('bClefSel').value;
+      const diff = document.getElementById('bDiffSel').value;
+      const useTreble = clefPref === 'treble' || (clefPref === 'both' && Math.random() < 0.5);
+
+      let minM, maxM;
+      if (useTreble) {
+        minM = diff === 'white' ? 64 : 60; // E4..F5 (in-staff) or C4..A5 (with ledger)
+        maxM = diff === 'white' ? 77 : 81;
+      } else {
+        // Keep within C3 (48) .. B3 (59) / D4 (62) so every note is playable on C3–B5 piano
+        minM = 48;
+        maxM = diff === 'ledger' ? 62 : 59;
+      }
+
+      const pool = [];
+      for (let m = minM; m <= maxM; m++) {
+        if (diff !== 'accidental' && !isWhiteMidi(m)) continue;
+        pool.push(m);
+      }
+      let midi = pool[Math.floor(Math.random() * pool.length)];
+      if (bState.q && pool.length > 1 && midi === bState.q.midi) {
+        midi = pool[(pool.indexOf(midi) + 1) % pool.length];
+      }
+
+      bState.q = { midi, pc: midi % 12 };
+      renderGrandStaff(document.getElementById('bStaffSvg'), [{ midi, color: '#38bdf8' }]);
+    }
+
+    function checkBasicsReadAnswer(pc, exactMidi = null, btnEl = null) {
+      if (!bState.q || bState.answered) return;
+      const octMode = document.getElementById('bOctMode').checked;
+      const fb = document.getElementById('bFeedback');
+
+      const isCorrect = (exactMidi !== null && octMode)
+        ? exactMidi === bState.q.midi
+        : pc === bState.q.pc;
+
+      if (isCorrect) {
+        bState.answered = true;
+        bState.streak++;
+        document.getElementById('bStreak').textContent = bState.streak;
+        if (btnEl) btnEl.classList.add('correct');
+        else {
+          const matchBtn = document.querySelector(`#bNoteGrid .note-btn[data-pc="${bState.q.pc}"]`);
+          if (matchBtn) matchBtn.classList.add('correct');
+        }
+        pianoUI.clearStatuses();
+        pianoUI.setKeyClass([bState.q.midi], 'check-ok');
+        renderGrandStaff(document.getElementById('bStaffSvg'), [{ midi: bState.q.midi, color: '#22c55e' }]);
+        audio.playNote(bState.q.midi, 0.65, 0, 0.8);
+        fb.className = 'basics-feedback ok';
+        fb.textContent = `Верно! Это ${midiToRu(bState.q.midi)}`;
+
+        if (bState.timerRunning) {
+          bState.timerScore++;
+          document.getElementById('bTimerScore').textContent = bState.timerScore;
+        }
+        bState.advanceTimer = setTimeout(generateBasicsReadQuestion, 700);
+      } else {
+        bState.streak = 0;
+        document.getElementById('bStreak').textContent = '0';
+        if (btnEl) btnEl.classList.add('wrong');
+        if (exactMidi !== null) {
+          pianoUI.setKeyClass([exactMidi], 'check-err');
+          setTimeout(() => pianoUI.clearStatuses(), 450);
+        }
+        fb.className = 'basics-feedback err';
+        fb.textContent = (exactMidi !== null && octMode && pc === bState.q.pc)
+          ? `Название верное (${NOTE_RU[pc]}), но нужна другая октава!`
+          : `Неверно (${NOTE_RU[pc]}). Попробуйте ещё раз!`;
+      }
+    }
+
+    function toggleBasicsTimer() {
+      const btn = document.getElementById('bTimerBtn');
+      const disp = document.getElementById('bTimerDisplay');
+      const scoreBox = document.getElementById('bTimerScoreBox');
+      const recBox = document.getElementById('bRecordBox');
+
+      if (bState.timerRunning) {
+        clearInterval(bState.timerInterval);
+        bState.timerRunning = false;
+        btn.textContent = '⏱ Старт таймера (1 мин)';
+        return;
+      }
+
+      bState.timerRunning = true;
+      bState.timerLeft = 60;
+      bState.timerScore = 0;
+      disp.style.display = 'block';
+      scoreBox.style.display = 'block';
+      recBox.style.display = 'block';
+      document.getElementById('bRecordVal').textContent = bState.best;
+      document.getElementById('bTimerScore').textContent = '0';
+      disp.textContent = '1:00';
+      btn.textContent = '■ Стоп таймера';
+      generateBasicsReadQuestion();
+
+      bState.timerInterval = setInterval(() => {
+        bState.timerLeft--;
+        const s = bState.timerLeft;
+        disp.textContent = `0:${s < 10 ? '0' : ''}${s}`;
+        if (bState.timerLeft <= 0) {
+          clearInterval(bState.timerInterval);
+          bState.timerRunning = false;
+          btn.textContent = '⏱ Старт таймера (1 мин)';
+          if (bState.timerScore > bState.best) {
+            bState.best = bState.timerScore;
+            try { localStorage.setItem(B_RECORD_KEY, String(bState.best)); } catch {}
+            document.getElementById('bRecordVal').textContent = bState.best;
+          }
+          const fb = document.getElementById('bFeedback');
+          fb.className = 'basics-feedback ok';
+          fb.textContent = `Время вышло! Результат: ${bState.timerScore} нот за минуту (рекорд: ${bState.best}).`;
+        }
+      }, 1000);
+    }
+
+    // Mode 2: Ear note from reference C4
+    function renderBasicsEarButtons() {
+      const grid = document.getElementById('bEarNoteGrid');
+      grid.innerHTML = '';
+      NOTE_RU.forEach((name, pc) => {
+        const btn = document.createElement('button');
+        btn.className = 'note-btn';
+        btn.dataset.pc = pc;
+        btn.textContent = name;
+        btn.addEventListener('click', () => checkBasicsEarAnswer(pc, btn));
+        grid.appendChild(btn);
+      });
+    }
+
+    function playBasicsEarSequence(q) {
+      if (!q) return;
+      audio.playNote(60, 0.65, 0, 0.8); // Reference C4
+      pianoUI.flashHighlight(60, 750);
+      setTimeout(() => {
+        audio.playNote(q.midi, 0.85, 0, 0.85);
+      }, 850);
+    }
+
+    function nextBasicsEarQuestion() {
+      bState.earAnswered = false;
+      pianoUI.clearStatuses();
+      document.querySelectorAll('#bEarNoteGrid .note-btn').forEach(b => b.classList.remove('correct', 'wrong'));
+      const fb = document.getElementById('bEarFeedback');
+      fb.className = 'basics-feedback';
+      fb.textContent = 'Слушайте: сначала звучит эталон До4, затем целевая нота...';
+
+      const targetMidi = 60 + Math.floor(Math.random() * 12); // C4..B4 (1 octave)
+      bState.earQ = { midi: targetMidi, pc: targetMidi % 12 };
+      playBasicsEarSequence(bState.earQ);
+    }
+
+    function checkBasicsEarAnswer(pc, btnEl = null) {
+      if (!bState.earQ || bState.earAnswered) return;
+      bState.earAnswered = true;
+      bState.earTotal++;
+      const fb = document.getElementById('bEarFeedback');
+
+      if (pc === bState.earQ.pc) {
+        bState.earOk++;
+        bState.earStreak++;
+        if (btnEl) btnEl.classList.add('correct');
+        else {
+          const mb = document.querySelector(`#bEarNoteGrid .note-btn[data-pc="${pc}"]`);
+          if (mb) mb.classList.add('correct');
+        }
+        pianoUI.setKeyClass([bState.earQ.midi], 'check-ok');
+        fb.className = 'basics-feedback ok';
+        fb.textContent = `Верно! Это ${midiToRu(bState.earQ.midi)}`;
+        setTimeout(nextBasicsEarQuestion, 900);
+      } else {
+        bState.earStreak = 0;
+        if (btnEl) btnEl.classList.add('wrong');
+        const cb = document.querySelector(`#bEarNoteGrid .note-btn[data-pc="${bState.earQ.pc}"]`);
+        if (cb) cb.classList.add('correct');
+        pianoUI.setKeyClass([bState.earQ.midi], 'check-ok');
+        fb.className = 'basics-feedback err';
+        fb.textContent = `Ошибка. Вы нажали ${NOTE_RU[pc]}, а звучала ${midiToRu(bState.earQ.midi)}`;
+      }
+      document.getElementById('bEarStreak').textContent = bState.earStreak;
+      document.getElementById('bEarAcc').textContent = Math.round((bState.earOk / bState.earTotal) * 100) + '%';
+    }
+
+    function handleBasicsPianoInput(midi) {
+      if (bState.mode === 'read') {
+        checkBasicsReadAnswer(midi % 12, midi, null);
+      } else {
+        checkBasicsEarAnswer(midi % 12, null);
+      }
+    }
+
+    document.querySelectorAll('.basics-subtab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.basics-subtab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        bState.mode = btn.dataset.bmode;
+        document.getElementById('bPanelRead').classList.toggle('active', bState.mode === 'read');
+        document.getElementById('bPanelEar').classList.toggle('active', bState.mode === 'ear');
+        pianoUI.clearStatuses();
+      });
+    });
+
+    document.getElementById('bClefSel').addEventListener('change', generateBasicsReadQuestion);
+    document.getElementById('bDiffSel').addEventListener('change', () => {
+      renderBasicsNoteButtons();
+      generateBasicsReadQuestion();
+    });
+    document.getElementById('bNewNoteBtn').addEventListener('click', generateBasicsReadQuestion);
+    document.getElementById('bTimerBtn').addEventListener('click', toggleBasicsTimer);
+    document.getElementById('bEarPlayBtn').addEventListener('click', nextBasicsEarQuestion);
+    document.getElementById('bEarRepeatBtn').addEventListener('click', () => playBasicsEarSequence(bState.earQ));
+
+    renderBasicsNoteButtons();
+    renderBasicsEarButtons();
+    generateBasicsReadQuestion();
 
     /* =========================================================
        10. DEVICE DETECTION (PC vs MOBILE PHONE)
