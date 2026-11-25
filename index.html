@@ -955,9 +955,14 @@
     /* =========================================================
        1. CHORD DATABASE (ALL TRIADS + ALL 8 SEVENTH CHORDS)
     ========================================================= */
-    const NOTE_RU = ['До', 'До♯', 'Ре', 'Ми♭', 'Ми', 'Фа', 'Соль♭', 'Соль', 'Ля♭', 'Ля', 'Си♭', 'Си'];
+    const NOTE_RU_SHARP = ['До', 'До♯', 'Ре', 'Ре♯', 'Ми', 'Фа', 'Фа♯', 'Соль', 'Соль♯', 'Ля', 'Ля♯', 'Си'];
+    const NOTE_RU_FLAT  = ['До', 'Ре♭', 'Ре', 'Ми♭', 'Ми', 'Фа', 'Соль♭', 'Соль', 'Ля♭', 'Ля', 'Си♭', 'Си'];
+    let NOTE_RU = NOTE_RU_SHARP;
+    let currentAccidentalMode = 'sharp';
     const NOTE_RU_GEN = ['До', 'До-диеза', 'Ре', 'Ми-бемоля', 'Ми', 'Фа', 'Соль-бемоля', 'Соль', 'Ля-бемоля', 'Ля', 'Си-бемоля', 'Си'];
-    const NOTE_LAT = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+    const NOTE_LAT = ['C', 'C#/Db', 'D', 'Eb', 'E', 'F', 'F#/Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+    const NOTE_LAT_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const NOTE_LAT_FLAT  = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 
     const CHORD_DB = [
       // Triads (4)
@@ -1013,8 +1018,14 @@
     ];
 
     function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
-    function midiToRu(m) { return NOTE_RU[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); }
-    function midiToRuNoOct(m) { return NOTE_RU[((m % 12) + 12) % 12]; }
+    function midiToRu(m, mode = currentAccidentalMode) {
+      const tbl = mode === 'flat' ? NOTE_RU_FLAT : NOTE_RU_SHARP;
+      return tbl[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+    }
+    function midiToRuNoOct(m, mode = currentAccidentalMode) {
+      const tbl = mode === 'flat' ? NOTE_RU_FLAT : NOTE_RU_SHARP;
+      return tbl[((m % 12) + 12) % 12];
+    }
 
     function buildInversionNotes(rootMidi, intervals, invIdx) {
       const notes = intervals.map(iv => rootMidi + iv);
@@ -1149,7 +1160,7 @@
     ];
     const DIATONIC_TO_SEMI = [0, 2, 4, 5, 7, 9, 11];
 
-    function renderGrandStaff(svgEl, notesList, onStaffClick = null) {
+    function renderGrandStaff(svgEl, notesList, onStaffClick = null, mode = currentAccidentalMode) {
       const stepH = 5.5;
       const trebleBottomY = 92; // E4 (d=30)
       const bassTopY = 148;     // A3 (d=26)
@@ -1165,7 +1176,7 @@
       svg += `<text x="40" y="${bassTopY + 33}" fill="#94a3b8" font-size="34" font-family="serif" pointer-events="none">𝄢</text>`;
 
       const sorted = [...notesList].sort((a, b) => a.midi - b.midi);
-      const tbl = PC_DEFAULT;
+      const tbl = mode === 'flat' ? PC_FLAT : PC_SHARP;
 
       const parsed = sorted.map(n => {
         const pc = ((n.midi % 12) + 12) % 12;
@@ -1244,8 +1255,18 @@
         this.heldVoices = new Map();
         this.highlightTimers = new Map();
         this.onNoteSelect = null;
+        this.accidentalMode = 'sharp';
         this.render();
         this.bind();
+      }
+      setAccidentalMode(mode) {
+        const next = mode === 'flat' ? 'flat' : 'sharp';
+        this.accidentalMode = next;
+        currentAccidentalMode = next;
+        NOTE_RU = next === 'flat' ? NOTE_RU_FLAT : NOTE_RU_SHARP;
+        this.keyEls.forEach((el, m) => {
+          if (this.isBlack(m)) el.textContent = midiToRu(m, next);
+        });
       }
       isBlack(m) { return [1,3,6,8,10].includes(m % 12); }
       render() {
@@ -1374,19 +1395,40 @@
       document.getElementById('pianoToggleBtn').textContent = collapsed ? '🎹 Показать' : '🎹 Свернуть';
     }
 
+    function getFormulaAccidentalMode() {
+      const ch = CHORD_DB.find(c => c.id === fState.chordId);
+      const isMinorChord = ch && ['min', 'dim', 'min7', 'mmaj7', 'm7b5', 'dim7'].includes(ch.id);
+      const isFlat = [5, 10, 3, 8, 1, 6].includes(fState.rootPc) || (isMinorChord && [2, 7, 0, 5, 10].includes(fState.rootPc));
+      return isFlat ? 'flat' : 'sharp';
+    }
+
+    function getSandboxAccidentalMode() {
+      const isFlat = sState.mode === 'major'
+        ? [5, 10, 3, 8, 1, 6].includes(sState.rootPc)
+        : [2, 7, 0, 5, 10, 3, 8].includes(sState.rootPc);
+      return isFlat ? 'flat' : 'sharp';
+    }
+
     function syncPianoMode() {
       const isTrainer = document.getElementById('sec-trainer').classList.contains('active');
       const isBasics = document.getElementById('sec-basics').classList.contains('active');
+      const isFormulas = document.getElementById('sec-formulas').classList.contains('active');
+      const isSandbox = document.getElementById('sec-sandbox').classList.contains('active');
       if (isTrainer) {
         document.getElementById('pianoModeBadge').textContent = 'Режим набора аккорда (клик по клавише добавляет/убирает ноту)';
         pianoUI.onNoteSelect = toggleTrainerNote;
+        pianoUI.setAccidentalMode((typeof mState !== 'undefined' && mState.task && mState.task.accidentalMode) ? mState.task.accidentalMode : 'sharp');
       } else if (isBasics) {
         document.getElementById('pianoModeBadge').textContent = 'Режим ответа (нажмите услышанную или показанную ноту)';
         pianoUI.onNoteSelect = handleBasicsPianoInput;
+        pianoUI.setAccidentalMode('sharp');
       } else {
         document.getElementById('pianoModeBadge').textContent = 'Режим свободной игры';
         pianoUI.onNoteSelect = null;
         pianoUI.clearStatuses();
+        if (isFormulas && typeof fState !== 'undefined') pianoUI.setAccidentalMode(getFormulaAccidentalMode());
+        else if (isSandbox && typeof sState !== 'undefined') pianoUI.setAccidentalMode(getSandboxAccidentalMode());
+        else pianoUI.setAccidentalMode('sharp');
       }
     }
 
@@ -1453,16 +1495,19 @@
         const givenMidi = dir === 'up'
           ? 53 + Math.floor(Math.random() * 14)   // F3..F#4
           : 62 + Math.floor(Math.random() * 14);  // D4..D#5
+        const givenPc = givenMidi % 12;
+        const accMode = ([3, 8, 10].includes(givenPc) || ([1, 6].includes(givenPc) && Math.random() < 0.45)) ? 'flat' : 'sharp';
+        pianoUI.setAccidentalMode(accMode);
         const targetMidi = dir === 'up' ? givenMidi + iv.semi : givenMidi - iv.semi;
         const expectedNotes = [Math.min(givenMidi, targetMidi), Math.max(givenMidi, targetMidi)];
         const dirLabel = dir === 'up' ? 'вверх' : 'вниз';
-        const title = `Построй интервал ${iv.short} (${iv.name}) ${dirLabel} от ноты ${midiToRu(givenMidi)}`;
+        const title = `Построй интервал ${iv.short} (${iv.name}) ${dirLabel} от ноты ${midiToRu(givenMidi, accMode)}`;
         const hint = `${iv.semi} полутонов · Ассоциация: ${iv.hint}. Нажмите обе ноты (опорную и целевую).`;
 
         mState.task = {
-          isInterval: true, iv, dir, givenMidi, targetMidi,
+          isInterval: true, iv, dir, givenMidi, targetMidi, accidentalMode: accMode,
           chord: { id: 'interval_' + iv.id, intervals: [0, iv.semi] },
-          rootPc: givenMidi % 12, invIdx: 0, invCode: iv.short,
+          rootPc: givenPc, invIdx: 0, invCode: iv.short,
           expectedNotes, title, hint
         };
         document.getElementById('mTaskTitle').textContent = title;
@@ -1476,21 +1521,32 @@
       else if (grp === 'sevenths') pool = CHORD_DB.filter(c => c.group === 'sevenths');
       else if (grp === 'rare') pool = CHORD_DB.filter(c => c.rare);
 
-      let chord, rootPc, invIdx, title, hint;
+      let chord, rootPc, invIdx, title, hint, accMode = 'sharp';
 
       if (mode === 'root') {
         chord = pool[Math.floor(Math.random() * pool.length)];
         rootPc = Math.floor(Math.random() * 12);
+        const isMinOrDim = ['min', 'dim', 'min7', 'mmaj7', 'm7b5', 'dim7'].includes(chord.id);
+        const useFlat = [3, 8, 10].includes(rootPc)
+          || ([1, 6].includes(rootPc) && Math.random() < 0.45)
+          || (rootPc === 5 && isMinOrDim);
+        accMode = useFlat ? 'flat' : 'sharp';
+        pianoUI.setAccidentalMode(accMode);
         invIdx = Math.floor(Math.random() * chord.invCodes.length);
         const invCode = chord.invCodes[invIdx];
         const shortLabel = chord.short.split(' ')[0].replace(/53|7/, '') + invCode;
-        title = `Построй ${shortLabel} (${chord.name} — ${INV_NAMES[invCode]}) от ноты ${NOTE_RU[rootPc]}`;
+        title = `Построй ${shortLabel} (${chord.name} — ${INV_NAMES[invCode]}) от ноты ${midiToRuNoOct(rootPc, accMode)}`;
         hint = `Состав: ${chord.intervals.length} звука · В басу должна быть ${TONE_ROLES[invIdx]}.`;
       } else {
         // Key mode: D7, II7, МвVII7, УмVII7 + inversions
         const keyRoot = Math.floor(Math.random() * 12);
         const isMinorKey = Math.random() < 0.45;
-        const keyLabel = `${NOTE_RU[keyRoot]} ${isMinorKey ? 'миноре' : 'мажоре'}`;
+        const flatMajors = [5, 10, 3, 8, 1]; // F, Bb, Eb, Ab, Db
+        const flatMinors = [2, 7, 0, 5, 10]; // Dm, Gm, Cm, Fm, Bbm
+        const isFlatKey = isMinorKey ? flatMinors.includes(keyRoot) : flatMajors.includes(keyRoot);
+        accMode = isFlatKey ? 'flat' : 'sharp';
+        pianoUI.setAccidentalMode(accMode);
+        const keyLabel = `${midiToRuNoOct(keyRoot, accMode)} ${isMinorKey ? 'миноре' : 'мажоре'}`;
 
         const degreeOptions = isMinorKey
           ? [
@@ -1510,11 +1566,11 @@
         invIdx = Math.floor(Math.random() * 4);
         const invCode = chord.invCodes[invIdx];
         title = `Построй ${pickDeg.degName}${invCode} в тональности ${keyLabel}`;
-        hint = `${chord.name} от ступени ${NOTE_RU[rootPc]} · В басу: ${TONE_ROLES[invIdx]}.`;
+        hint = `${chord.name} от ступени ${midiToRuNoOct(rootPc, accMode)} · В басу: ${TONE_ROLES[invIdx]}.`;
       }
 
       const expectedNotes = buildInversionNotes(60 + rootPc, chord.intervals, invIdx);
-      mState.task = { chord, rootPc, invIdx, invCode: chord.invCodes[invIdx], expectedNotes, title, hint };
+      mState.task = { chord, rootPc, invIdx, invCode: chord.invCodes[invIdx], expectedNotes, title, hint, accidentalMode: accMode };
 
       document.getElementById('mTaskTitle').textContent = title;
       document.getElementById('mTaskHint').textContent = hint;
@@ -1762,7 +1818,12 @@
       });
 
       const ch = CHORD_DB.find(c => c.id === fState.chordId);
-      document.getElementById('fSelTitle').textContent = `${NOTE_LAT[fState.rootPc]}${ch.lat} — ${ch.name}`;
+      const fMode = getFormulaAccidentalMode();
+      if (document.getElementById('sec-formulas').classList.contains('active')) {
+        pianoUI.setAccidentalMode(fMode);
+      }
+      const latTbl = fMode === 'flat' ? NOTE_LAT_FLAT : NOTE_LAT_SHARP;
+      document.getElementById('fSelTitle').textContent = `${latTbl[fState.rootPc]}${ch.lat} — ${ch.name}`;
 
       const pills = document.getElementById('fInvPills');
       pills.innerHTML = '';
@@ -1782,11 +1843,11 @@
       const diffs = [];
       for (let i = 1; i < notes.length; i++) diffs.push(`${notes[i] - notes[i-1]} пт`);
       document.getElementById('fIntervalExplain').innerHTML = `
-        <div><strong>Ноты:</strong> <span class="mono" style="color:var(--accent);">${notes.map(midiToRu).join(' – ')}</span></div>
+        <div><strong>Ноты:</strong> <span class="mono" style="color:var(--accent);">${notes.map(m => midiToRu(m, fMode)).join(' – ')}</span></div>
         <div style="margin-top:3px;"><strong>Интервалы снизу вверх:</strong> <span class="mono">${diffs.join(' + ')}</span> · Бас: <strong>${TONE_ROLES[fState.invIdx]}</strong></div>
       `;
 
-      renderGrandStaff(document.getElementById('fStaffSvg'), notes.map(m => ({ midi: m, color: '#38bdf8' })));
+      renderGrandStaff(document.getElementById('fStaffSvg'), notes.map(m => ({ midi: m, color: '#38bdf8' })), null, fMode);
     }
 
     initFormulaTab();
@@ -1970,9 +2031,10 @@
 
     function getSandboxChords() {
       const d = SCALE_DEFS[sState.mode];
+      const latTbl = getSandboxAccidentalMode() === 'flat' ? NOTE_LAT_FLAT : NOTE_LAT_SHARP;
       return d.steps.map((st, idx) => {
         const pc = (sState.rootPc + st) % 12;
-        return { idx, pc, roman: d.romans[idx], name: NOTE_LAT[pc] + d.q[idx], fn: d.fns[idx], iv: d.triads[idx] };
+        return { idx, pc, roman: d.romans[idx], name: latTbl[pc] + d.q[idx], fn: d.fns[idx], iv: d.triads[idx] };
       });
     }
 
@@ -2013,6 +2075,9 @@
     }
 
     function renderSandbox() {
+      if (document.getElementById('sec-sandbox').classList.contains('active')) {
+        pianoUI.setAccidentalMode(getSandboxAccidentalMode());
+      }
       const pal = document.getElementById('sDegreePalette');
       pal.innerHTML = '';
       getSandboxChords().forEach(ch => {
