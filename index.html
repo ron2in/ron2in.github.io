@@ -422,7 +422,13 @@
     }
     body.is-mobile .nav-tabs::-webkit-scrollbar { display: none; }
     body.is-mobile .nav-tab { white-space: nowrap; padding: 7px 11px; font-size: 12px; flex-shrink: 0; }
-    body.is-mobile .workspace { padding: 10px 12px; }
+    body.is-mobile .workspace { padding: 10px 12px; overflow-x: hidden; }
+    body.is-mobile .section { overflow-x: hidden; max-width: 100%; }
+    body.is-mobile .container,
+    body.is-mobile .harm-layout,
+    body.is-mobile .harm-layout > .card,
+    body.is-mobile .score-staff-wrap { min-width: 0; max-width: 100%; }
+    body.is-mobile .harm-layout { grid-template-columns: minmax(0, 1fr); }
     body.is-mobile .section-title { font-size: 16.5px; }
     body.is-mobile .daw-select { font-size: 14px; min-height: 38px; max-width: 100%; }
     body.is-mobile .btn { min-height: 38px; padding: 8px 12px; }
@@ -430,9 +436,11 @@
     body.is-mobile .answers-grid { grid-template-columns: repeat(2, 1fr); }
     body.is-mobile .bars-grid { grid-template-columns: repeat(2, 1fr); }
     body.is-mobile .steps-editor-grid {
+      width: 100%;
+      max-width: 100%;
       grid-template-columns: none;
       grid-auto-flow: column;
-      grid-auto-columns: 78%;
+      grid-auto-columns: calc(50% - 4px);
       overflow-x: auto;
       scroll-snap-type: x mandatory;
       padding-bottom: 6px;
