@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Harmony & Chord Lab — Тренажёр построения и обращений аккордов</title>
   <style>
     :root {
@@ -429,11 +429,25 @@
     body.is-mobile .btn-sm { min-height: 30px; padding: 4px 8px; }
     body.is-mobile .answers-grid { grid-template-columns: repeat(2, 1fr); }
     body.is-mobile .bars-grid { grid-template-columns: repeat(2, 1fr); }
-    body.is-mobile .steps-editor-grid { grid-template-columns: repeat(2, 1fr); }
-    body.is-mobile .piano-dock { padding: 6px 10px 8px; }
+    body.is-mobile .steps-editor-grid {
+      grid-template-columns: none;
+      grid-auto-flow: column;
+      grid-auto-columns: 78%;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding-bottom: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+    body.is-mobile .step-card { scroll-snap-align: start; }
+    body.is-mobile .v-btn { width: 28px; height: 28px; font-size: 12px; }
+    body.is-mobile .piano-dock { padding: 6px 10px calc(8px + env(safe-area-inset-bottom)); }
     body.is-mobile .piano-pc-hint { display: none; }
     body.is-mobile .mobile-oct-bar { display: flex; }
     body.is-mobile .piano-container { min-width: 820px; height: 104px; touch-action: pan-x; }
+    .mobile-mute-btn { display: none; }
+    body.is-mobile .mobile-mute-btn { display: inline-flex; }
+    body.is-mobile .audio-controls .control-group { display: none; }
+    .piano-dock { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
   </style>
 </head>
 <body>
@@ -457,6 +471,7 @@
 
     <div class="audio-controls">
       <button id="deviceModeBtn" class="device-pill" title="Определено автоматически. Нажмите, чтобы переключить вид ПК/Телефон">💻 ПК</button>
+      <button id="muteToggleBtn" class="device-pill mobile-mute-btn" title="Вкл/выкл звук">🔊</button>
       <div class="control-group">
         <label for="volumeSlider">Громкость:</label>
         <input id="volumeSlider" type="range" min="0" max="1" step="0.05" value="0.72" style="width:74px;" />
@@ -1126,12 +1141,14 @@
         if (this.onNoteSelect) {
           audio.playNote(m, 0.55, 0, 0.8);
           this.onNoteSelect(m);
+          navigator.vibrate?.(12);
           return;
         }
         if (this.heldVoices.has(m)) return;
         const el = this.keyEls.get(m);
         if (el) el.classList.add('active');
         this.heldVoices.set(m, audio.playNote(m, null, 0, 0.8));
+        navigator.vibrate?.(12);
       }
       releaseKey(m) {
         const el = this.keyEls.get(m);
@@ -1147,11 +1164,34 @@
         this.highlightTimers.set(m, setTimeout(() => { el.classList.remove('highlight'); this.highlightTimers.delete(m); }, ms));
       }
       bind() {
+        let tapState = null; // { midi, x, y, moved }
         this.el.addEventListener('pointerdown', e => {
           const k = e.target.closest('[data-midi]');
-          if (k) this.pressKey(Number(k.dataset.midi));
+          if (!k) return;
+          const midi = Number(k.dataset.midi);
+          tapState = { midi, x: e.clientX, y: e.clientY, moved: false };
+          if (!this.onNoteSelect) {
+            this.pressKey(midi);
+          }
         });
-        window.addEventListener('pointerup', () => Array.from(this.heldVoices.keys()).forEach(m => this.releaseKey(m)));
+        window.addEventListener('pointermove', e => {
+          if (!tapState || tapState.moved) return;
+          const dx = e.clientX - tapState.x;
+          const dy = e.clientY - tapState.y;
+          if (Math.hypot(dx, dy) > 10) {
+            tapState.moved = true;
+            this.releaseKey(tapState.midi);
+          }
+        }, { passive: true });
+        const endTap = () => {
+          if (tapState && !tapState.moved && this.onNoteSelect) {
+            this.pressKey(tapState.midi);
+          }
+          tapState = null;
+          Array.from(this.heldVoices.keys()).forEach(m => this.releaseKey(m));
+        };
+        window.addEventListener('pointerup', endTap);
+        window.addEventListener('pointercancel', endTap);
         window.addEventListener('keydown', e => {
           if (e.repeat || ['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
           let m = KBD_LOWER[e.code];
@@ -1167,7 +1207,25 @@
     }
 
     const pianoUI = new PianoUI(document.getElementById('pianoKeyboard'));
-    document.getElementById('volumeSlider').addEventListener('input', e => audio.setVolume(Number(e.target.value)));
+    let savedVolume = 0.72;
+    let isMuted = false;
+    document.getElementById('volumeSlider').addEventListener('input', e => {
+      savedVolume = Number(e.target.value);
+      isMuted = savedVolume === 0;
+      document.getElementById('muteToggleBtn').textContent = isMuted ? '🔇' : '🔊';
+      audio.setVolume(savedVolume);
+    });
+    document.getElementById('muteToggleBtn').addEventListener('click', () => {
+      isMuted = !isMuted;
+      audio.setVolume(isMuted ? 0 : (savedVolume || 0.72));
+      document.getElementById('muteToggleBtn').textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    function setPianoCollapsed(collapsed) {
+      const dock = document.getElementById('pianoDock');
+      dock.classList.toggle('collapsed', collapsed);
+      document.getElementById('pianoToggleBtn').textContent = collapsed ? '🎹 Показать' : '🎹 Свернуть';
+    }
 
     function syncPianoMode() {
       const isTrainer = document.getElementById('sec-trainer').classList.contains('active');
@@ -1183,8 +1241,13 @@
         document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         btn.classList.add('active');
-        document.getElementById('sec-' + btn.dataset.tab).classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('sec-' + tab).classList.add('active');
         syncPianoMode();
+        if (document.body.classList.contains('is-mobile')) {
+          if (tab === 'harmonize' || tab === 'formulas') setPianoCollapsed(true);
+          else if (tab === 'trainer') setPianoCollapsed(false);
+        }
       });
     });
 
