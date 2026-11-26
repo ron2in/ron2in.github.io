@@ -1,0 +1,24 @@
+{
+  "name": "AlgoPortal",
+  "short_name": "AlgoPortal",
+  "description": "Интерактивный портал для изучения алгоритмов и структур данных (e-maxx / cp-algorithms)",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#131B2A",
+  "theme_color": "#A855F7",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='36' fill='%23131B2A'/><rect x='16' y='16' width='160' height='160' rx='28' fill='%23A855F7'/><text x='96' y='118' font-family='monospace' font-size='74' font-weight='700' fill='%23F8FAFC' text-anchor='middle'>{λ}</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='%23131B2A'/><rect x='40' y='40' width='432' height='432' rx='76' fill='%23A855F7'/><text x='256' y='310' font-family='monospace' font-size='196' font-weight='700' fill='%23F8FAFC' text-anchor='middle'>{λ}</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
