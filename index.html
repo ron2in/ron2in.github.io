@@ -499,7 +499,7 @@
         const card = document.createElement('a');
         card.className = 'site-card';
         card.href = site.url;
-        if (!site.url.startsWith('./') && !site.url.startsWith('/')) {
+        if (!site.url.startsWith('./') && !site.url.startsWith('/') && !site.url.startsWith(`https://${GITHUB_USER}.github.io/`)) {
           card.target = '_blank';
           card.rel = 'noopener';
         }
