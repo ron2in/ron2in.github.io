@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>C++ Dungeon: Roguelike Academy</title>
+
+  <!-- Пиксельные шрифты с поддержкой кириллицы + JetBrains Mono для кода -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet" />
+
+  <!-- CodeMirror 5 через CDN (для подсветки C++ и автоотступов) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Верхняя панель навигации -->
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-icon">⚔️</span>
+        <div>
+          <h1>C++ DUNGEON</h1>
+          <span class="subtitle">Roguelike Academy</span>
+        </div>
+      </div>
+
+      <div class="top-controls">
+        <button id="btn-floors" class="pixel-btn secondary">🗺️ Этажи</button>
+        <button id="btn-sandbox" class="pixel-btn accent">🧪 Песочница</button>
+        <button id="btn-reset-save" class="pixel-btn danger" title="Сбросить прогресс">♻️ Сброс</button>
+      </div>
+    </header>
+
+    <!-- Основная Split-Screen зона -->
+    <main class="split-layout">
+      <!-- Левая панель: 2D Canvas + Статы + Миникарта -->
+      <section class="dungeon-pane">
+        <div class="hud-header">
+          <div class="floor-badge">
+            <span id="floor-title">Этаж 1. Склеп Переменных</span>
+            <small id="room-title">Комната 1/3</small>
+          </div>
+          <canvas id="minimap-canvas" width="140" height="38" title="Мини-карта этажа"></canvas>
+        </div>
+
+        <div class="canvas-wrapper">
+          <canvas id="dungeon-canvas" width="480" height="270"></canvas>
+        </div>
+
+        <div class="bars-row">
+          <div class="stat-box">
+            <div class="stat-label">
+              <span>❤️ HP Героя</span>
+              <span id="hero-hp-text">100 / 100</span>
+            </div>
+            <div class="progress-track"><div id="hero-hp-bar" class="progress-fill hp" style="width: 100%"></div></div>
+          </div>
+
+          <div class="stat-box">
+            <div class="stat-label">
+              <span>💧 Мана</span>
+              <span id="hero-mana-text">100 / 100</span>
+            </div>
+            <div class="progress-track"><div id="hero-mana-bar" class="progress-fill mana" style="width: 100%"></div></div>
+          </div>
+
+          <div class="stat-box">
+            <div class="stat-label">
+              <span id="enemy-name-text">👾 Враг</span>
+              <span id="enemy-hp-text">25 / 25</span>
+            </div>
+            <div class="progress-track"><div id="enemy-hp-bar" class="progress-fill enemy" style="width: 100%"></div></div>
+          </div>
+        </div>
+
+        <!-- Задание комнаты и переход -->
+        <div class="quest-box">
+          <div class="quest-title">📜 Боевая задача:</div>
+          <p id="room-goal">Загрузка задания...</p>
+          <div id="room-actions" class="room-actions hidden">
+            <button id="btn-next-room" class="pixel-btn success">⬇️ Спуститься дальше</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Правая панель: Гримуар (Редактор C++ / Консоль / Книга заклинаний) -->
+      <section class="grimoire-pane">
+        <div class="tabs-bar">
+          <button class="tab-btn active" data-tab="editor">💻 Гримуар C++</button>
+          <button class="tab-btn" data-tab="spellbook">📖 Книга заклинаний</button>
+          <button id="btn-reset-code" class="pixel-btn tiny secondary" style="margin-left:auto">↺ Шаблон</button>
+        </div>
+
+        <!-- Вкладка редактора -->
+        <div id="tab-editor" class="tab-content active">
+          <div class="editor-container">
+            <textarea id="cpp-editor" spellcheck="false"></textarea>
+          </div>
+
+          <div class="run-bar">
+            <button id="btn-run" class="pixel-btn primary">⚡ Скомпилировать и Применить (Run)</button>
+            <span id="run-status" class="run-status">Готов к компиляции</span>
+          </div>
+
+          <div class="console-grid">
+            <div class="console-box">
+              <div class="console-header">🖥️ Консоль вывода (cout)</div>
+              <pre id="cout-output" class="console-body">...</pre>
+            </div>
+            <div class="console-box error-box">
+              <div class="console-header">🔥 Магические сбои &amp; Лог боя</div>
+              <pre id="error-output" class="console-body">Ошибок нет.</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Вкладка книги заклинаний -->
+        <div id="tab-spellbook" class="tab-content">
+          <div id="spellbook-content" class="spellbook-body"></div>
+          <div class="api-reference">
+            <h4>⚡ Bridge API (&lt;dungeon&gt;)</h4>
+            <ul>
+              <li><code>attack(int dmg)</code> — обычный удар (снижается бронёй).</li>
+              <li><code>pierceAttack(int dmg)</code> — пробивает броню полностью.</li>
+              <li><code>critHit(int dmg)</code> — двойной урон (если открыт навык).</li>
+              <li><code>heal(int hp)</code> — лечит героя.</li>
+              <li><code>castShield()</code> — ставит магический щит.</li>
+              <li><code>getEnemyHp()</code>, <code>getEnemyArmor()</code>, <code>getEnemyCount()</code>, <code>getEnemyHpAt(i)</code></li>
+              <li><code>targetEnemy(int idx)</code>, <code>unlockDoor(const char* key)</code>, <code>getRuneCode()</code></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Нижняя панель: Колода / Инвентарь карточек C++ -->
+    <footer class="deck-bar">
+      <div class="deck-header">
+        <span>🃏 Колода свитков C++ и бонусов (клик — вставить шаблон в редактор):</span>
+        <span id="deck-bonuses" class="deck-bonuses">Бонусы: нет</span>
+      </div>
+      <div id="deck-cards" class="deck-cards"></div>
+    </footer>
+  </div>
+
+  <!-- Модальное окно выбора награды (1 из 3 карточек) -->
+  <div id="reward-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>🏆 Победа в комнате! Выбери награду</h2>
+      <p>Выбери 1 из 3 свитков для усиления своей колоды:</p>
+      <div id="reward-choices" class="reward-choices"></div>
+    </div>
+  </div>
+
+  <!-- Модальное окно выбора этажа -->
+  <div id="floors-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🗺️ Карта Подземелья</h2>
+        <button id="btn-close-floors" class="pixel-btn tiny danger">✕</button>
+      </div>
+      <div id="floors-list" class="floors-list"></div>
+    </div>
+  </div>
+
+  <!-- Локальный JSCPP -->
+  <script src="lib/JSCPP.es5.min.js"></script>
+
+  <!-- CodeMirror 5 + C-like режим через CDN (с безопасным fallback на textarea) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+
+  <!-- Модульный Vanilla JS (ES6+) -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

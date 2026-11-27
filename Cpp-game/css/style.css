@@ -1,0 +1,511 @@
+:root {
+  --bg-dark: #0b0d14;
+  --bg-panel: #131724;
+  --bg-panel-alt: #1b2032;
+  --border-pixel: #334155;
+  --accent-gold: #facc15;
+  --accent-blue: #38bdf8;
+  --accent-purple: #a855f7;
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --font-pixel: 'Press Start 2P', 'Silkscreen', monospace;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-code: 'JetBrains Mono', Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  gap: 10px;
+}
+
+/* Верхняя панель */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-panel);
+  border: 2px solid var(--border-pixel);
+  padding: 10px 14px;
+  box-shadow: 0 4px 0 #05070b;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  font-size: 26px;
+}
+
+.brand h1 {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: var(--accent-gold);
+  letter-spacing: 1px;
+}
+
+.brand .subtitle {
+  font-size: 11px;
+  color: var(--accent-blue);
+  font-family: var(--font-code);
+}
+
+.top-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Пиксельные кнопки */
+.pixel-btn {
+  font-family: var(--font-code);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 8px 12px;
+  border: 2px solid #000;
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.35), 2px 2px 0 #000;
+  cursor: pointer;
+  color: #fff;
+  background: #334155;
+  transition: transform 0.08s;
+}
+
+.pixel-btn:hover {
+  filter: brightness(1.12);
+}
+
+.pixel-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+.pixel-btn.primary { background: #2563eb; }
+.pixel-btn.success { background: #16a34a; }
+.pixel-btn.accent { background: #7e22ce; }
+.pixel-btn.danger { background: #dc2626; }
+.pixel-btn.secondary { background: #334155; }
+.pixel-btn.tiny { padding: 4px 8px; font-size: 11px; }
+
+/* Split-Screen Layout */
+.split-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 12px;
+  flex: 1;
+}
+
+@media (max-width: 1024px) {
+  .split-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dungeon-pane,
+.grimoire-pane {
+  background: var(--bg-panel);
+  border: 2px solid var(--border-pixel);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.floor-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+#floor-title {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--accent-gold);
+}
+
+#room-title {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.canvas-wrapper {
+  background: #07090f;
+  border: 2px solid #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+#dungeon-canvas {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+#minimap-canvas {
+  border: 1px solid var(--border-pixel);
+  image-rendering: pixelated;
+}
+
+/* Статус бары */
+.bars-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.stat-box {
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border-pixel);
+  padding: 6px 8px;
+}
+
+.stat-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 4px;
+  font-family: var(--font-code);
+}
+
+.progress-track {
+  height: 10px;
+  background: #090c14;
+  border: 1px solid #000;
+}
+
+.progress-fill {
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+.progress-fill.hp { background: #22c55e; }
+.progress-fill.mana { background: #3b82f6; }
+.progress-fill.enemy { background: #ef4444; }
+
+.quest-box {
+  background: var(--bg-panel-alt);
+  border-left: 4px solid var(--accent-gold);
+  padding: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.quest-title {
+  font-family: var(--font-code);
+  font-weight: 700;
+  color: var(--accent-gold);
+  margin-bottom: 4px;
+}
+
+.room-actions {
+  margin-top: 8px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Гримуар / Редактор */
+.tabs-bar {
+  display: flex;
+  gap: 6px;
+  border-bottom: 2px solid var(--border-pixel);
+  padding-bottom: 8px;
+}
+
+.tab-btn {
+  background: var(--bg-panel-alt);
+  color: var(--text-muted);
+  border: 1px solid var(--border-pixel);
+  padding: 6px 12px;
+  font-family: var(--font-code);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  background: #1e293b;
+  color: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+
+.tab-content {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.tab-content.active {
+  display: flex;
+}
+
+.editor-container {
+  border: 2px solid #000;
+  min-height: 230px;
+  background: #1e1f29;
+}
+
+.CodeMirror {
+  height: 240px !important;
+  font-family: var(--font-code) !important;
+  font-size: 13px !important;
+}
+
+#cpp-editor {
+  width: 100%;
+  height: 240px;
+  background: #1e1f29;
+  color: #f8f8f2;
+  font-family: var(--font-code);
+  font-size: 13px;
+  padding: 10px;
+  border: none;
+  resize: vertical;
+}
+
+.run-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.run-status {
+  font-family: var(--font-code);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.console-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.console-box {
+  background: #090c14;
+  border: 1px solid var(--border-pixel);
+  display: flex;
+  flex-direction: column;
+}
+
+.console-header {
+  background: #161b2a;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-family: var(--font-code);
+  color: var(--accent-blue);
+  border-bottom: 1px solid var(--border-pixel);
+}
+
+.error-box .console-header {
+  color: #f87171;
+}
+
+.console-body {
+  padding: 8px;
+  font-family: var(--font-code);
+  font-size: 12px;
+  min-height: 92px;
+  max-height: 135px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Книга заклинаний */
+.spellbook-body,
+.api-reference {
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border-pixel);
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.spellbook-body h4,
+.api-reference h4 {
+  color: var(--accent-gold);
+  margin-bottom: 6px;
+}
+
+.spellbook-body pre,
+.spellbook-body code,
+.api-reference code {
+  background: #090c14;
+  color: var(--accent-blue);
+  padding: 2px 5px;
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+.spellbook-body pre {
+  padding: 8px;
+  margin: 8px 0;
+  overflow-x: auto;
+}
+
+.spellbook-body ul,
+.api-reference ul {
+  padding-left: 18px;
+}
+
+/* Нижняя колода карточек */
+.deck-bar {
+  background: var(--bg-panel);
+  border: 2px solid var(--border-pixel);
+  padding: 10px 14px;
+}
+
+.deck-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-family: var(--font-code);
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.deck-bonuses {
+  color: var(--accent-green);
+}
+
+.deck-cards {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.rpg-card {
+  min-width: 175px;
+  max-width: 195px;
+  background: var(--bg-panel-alt);
+  border: 2px solid #475569;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+}
+
+.rpg-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-gold);
+}
+
+.rpg-card.rarity-rare { border-color: var(--accent-blue); }
+.rpg-card.rarity-epic { border-color: var(--accent-purple); }
+.rpg-card.rarity-legendary { border-color: var(--accent-gold); }
+
+.rpg-card-title {
+  font-family: var(--font-code);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--accent-gold);
+  margin-bottom: 4px;
+}
+
+.rpg-card-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+/* Модальные окна */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 7, 12, 0.84);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-card {
+  background: var(--bg-panel);
+  border: 3px solid var(--accent-gold);
+  padding: 18px;
+  max-width: 720px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+.modal-card h2 {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  color: var(--accent-gold);
+  margin-bottom: 10px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.reward-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.floors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.floor-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border-pixel);
+  padding: 10px 12px;
+}
+
+.floor-item.locked {
+  opacity: 0.5;
+}
